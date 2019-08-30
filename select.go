@@ -79,24 +79,61 @@ type Joinable interface {
 	IsJoinable()
 }
 
-func (InnerJoinStmt) IsJoinable() {}
-func (LeftJoinStmt) IsJoinable()  {}
-func (TableNameStmt) IsJoinable() {}
+func (InnerJoinStmt) IsJoinable()     {}
+func (LeftJoinStmt) IsJoinable()      {}
+func (FullOuterJoinStmt) IsJoinable() {}
+func (RightJoinStmt) IsJoinable()     {}
+func (CrossJoinStmt) IsJoinable()     {}
+func (TableNameStmt) IsJoinable()     {}
 
-type joinStmtWithOn struct {
+type joinStmt struct {
 	kind                  string
-	LeftTable, RightTable FromStmt
-	LeftCol, RightCol     string
+	LeftTable, RightTable Joinable
 }
 
-func newjoinStmtWithOn(Left, Right Joinable, on OnStmt, kind string) joinStmtWithOn {
-	return joinStmtWithOn{
-		LeftTable:  Left,
-		RightTable: Right,
-		LeftCol:    on.A,
-		RightCol:   on.B,
+func newJoinStmt(l, r Joinable, kind string) joinStmt {
+	return joinStmt{
 		kind:       kind,
+		LeftTable:  l,
+		RightTable: r,
 	}
+}
+
+func (js joinStmt) WriteSQLTo(st SQLWriter) error {
+	err := js.LeftTable.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.Write([]byte(" " + js.kind + " JOIN "))
+	if err != nil {
+		return err
+	}
+	err = js.RightTable.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type joinStmtWithOn struct {
+	joinStmt
+	LeftCol, RightCol string
+}
+
+func newjoinStmtWithOn(left, right Joinable, on OnStmt, kind string) joinStmtWithOn {
+	return joinStmtWithOn{
+		joinStmt: newJoinStmt(left, right, kind),
+		LeftCol:  on.A,
+		RightCol: on.B,
+	}
+}
+
+func (jso joinStmtWithOn) WriteSQLTo(st SQLWriter) error {
+	if err := jso.joinStmt.WriteSQLTo(st); err != nil {
+		return err
+	}
+	_, err := st.Write([]byte(" ON " + jso.LeftCol + "=" + jso.RightCol))
+	return err
 }
 
 type InnerJoinStmt struct {
@@ -127,25 +164,34 @@ func LeftJoin(left, right Joinable, on OnStmt) LeftJoinStmt {
 	}
 }
 
-func (jso joinStmtWithOn) WriteSQLTo(st SQLWriter) error {
-	err := jso.LeftTable.WriteSQLTo(st)
-	if err != nil {
-		return err
-	}
-	_, err = st.Write([]byte(" " + jso.kind + " JOIN "))
-	if err != nil {
-		return err
-	}
-	err = jso.RightTable.WriteSQLTo(st)
-	if err != nil {
-		return err
-	}
+type FullOuterJoinStmt struct {
+	joinStmtWithOn
+}
 
-	_, err = st.Write([]byte(" ON " + jso.LeftCol + "=" + jso.RightCol))
-	if err != nil {
-		return err
+func FullOuterJoin(left, right Joinable, on OnStmt) FullOuterJoinStmt {
+	return FullOuterJoinStmt{
+		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "FULL OUTER"),
 	}
-	return nil
+}
+
+type RightJoinStmt struct {
+	joinStmtWithOn
+}
+
+func RightJoin(left, right Joinable, on OnStmt) RightJoinStmt {
+	return RightJoinStmt{
+		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "RIGHT"),
+	}
+}
+
+type CrossJoinStmt struct {
+	joinStmt
+}
+
+func CrossJoin(l, r Joinable) CrossJoinStmt {
+	return CrossJoinStmt{
+		joinStmt: newJoinStmt(l, r, "CROSS"),
+	}
 }
 
 type TableNameStmt string
