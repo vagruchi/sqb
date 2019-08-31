@@ -7,7 +7,7 @@ import (
 
 type SQLWriter interface {
 	io.Writer
-	AddArgs(...interface{})
+	AddArgs(...interface{}) error
 }
 
 type SQB interface {
@@ -15,14 +15,16 @@ type SQB interface {
 }
 
 type SelectStmt struct {
-	cols []string
-	From FromStmt
+	cols      []string
+	From      FromStmt
+	WhereStmt WhereStmt
 }
 
 type FromStmt interface {
 	SQB
 }
 
+//TODO: make coloumns interface (coloumn names, functions)
 func (cs SelectStmt) Select(cc ...string) SelectStmt {
 	cp := cs
 	cp.cols = cc
@@ -48,7 +50,26 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		return err
 	}
 
-	return s.From.WriteSQLTo(st)
+	err = s.From.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	// TODO: Think about unnecessary space
+	_, err = st.Write([]byte(` `))
+	if err != nil {
+		return err
+	}
+
+	return s.WhereStmt.WriteSQLTo(st)
+}
+
+func (cs SelectStmt) Where(exprs ...BoolExpr) SelectStmt {
+	cp := cs
+	cp.WhereStmt = WhereStmt{
+		Exprs: exprs,
+	}
+	return cp
 }
 
 func (s SelectStmt) As(name string) JoinableSelect {
@@ -200,7 +221,113 @@ func TableName(n string) TableNameStmt {
 	return TableNameStmt(n)
 }
 
+func (tns TableNameStmt) As(name string) TableNameAsStmt {
+	return TableNameAsStmt{
+		TableNameStmt: tns,
+		AS:            name,
+	}
+}
+
 func (tn TableNameStmt) WriteSQLTo(st SQLWriter) error {
 	_, err := st.Write([]byte(tn))
 	return err
+}
+
+type TableNameAsStmt struct {
+	TableNameStmt
+	AS string
+}
+
+func (tn TableNameAsStmt) WriteSQLTo(st SQLWriter) error {
+	err := tn.TableNameStmt.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.Write([]byte(` AS ` + tn.AS))
+	return err
+}
+
+type WhereStmt struct {
+	Exprs []BoolExpr
+}
+
+func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
+	if len(ws.Exprs) == 0 {
+		return nil
+	}
+	_, err := st.Write([]byte(`WHERE `))
+	if err != nil {
+		return err
+	}
+	err = ws.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	if len(ws.Exprs) == 1 {
+		return nil
+	}
+
+	for _, ex := range ws.Exprs[1:] {
+		_, err := st.Write([]byte(`, `))
+		if err != nil {
+			return err
+		}
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type BoolExpr interface {
+	SQB
+}
+
+type EqExpr struct {
+	A, B Comparable
+}
+
+func Eq(a, b Comparable) EqExpr {
+	return EqExpr{A: a, B: b}
+}
+
+func (ee EqExpr) WriteSQLTo(st SQLWriter) error {
+	err := ee.A.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.Write([]byte(`=`))
+	if err != nil {
+		return err
+	}
+	return ee.B.WriteSQLTo(st)
+}
+
+type Comparable interface {
+	IsComparable()
+	SQB
+}
+
+func (Coloumn) IsComparable() {}
+func (Arg) IsComparable()     {}
+
+type Coloumn string
+
+func (c Coloumn) WriteSQLTo(st SQLWriter) error {
+	_, err := st.Write([]byte(c))
+	return err
+}
+
+type Arg struct {
+	V interface{}
+}
+
+func (a Arg) WriteSQLTo(st SQLWriter) error {
+	_, err := st.Write([]byte(`?`))
+	if err != nil {
+		return err
+	}
+	return st.AddArgs(a.V)
 }

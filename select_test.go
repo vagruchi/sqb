@@ -30,27 +30,33 @@ func TestWriteSQLTo(t *testing.T) {
 		},
 		{
 			name:           "select from users",
-			expectedRawSQL: "SELECT * FROM users",
+			expectedRawSQL: "SELECT * FROM users ",
 			sqb:            From(TableName("users")),
 		},
 		{
 			name:           "select from left join",
-			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id",
+			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id ",
 			sqb: From(
 				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
 			),
 		},
 		{
 			name:           "select ids from left join",
-			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id",
+			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id ",
 			sqb: From(
 				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
 			).Select("users.id"),
 		},
 		{
 			name:           "subquery",
-			expectedRawSQL: "SELECT * FROM (SELECT * FROM users) AS users",
+			expectedRawSQL: "SELECT * FROM (SELECT * FROM users ) AS users ",
 			sqb:            From(From(TableName("users")).As("users")),
+		},
+		{
+			name:           "Where",
+			expectedRawSQL: "SELECT * FROM users WHERE city=?",
+			expectedArgs:   []interface{}{10},
+			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})),
 		},
 	}
 	for _, tt := range tests {
@@ -74,6 +80,7 @@ type testSQLWriter struct {
 	Args []interface{}
 }
 
-func (tsw *testSQLWriter) AddArgs(aa ...interface{}) {
+func (tsw *testSQLWriter) AddArgs(aa ...interface{}) error {
 	tsw.Args = append(tsw.Args, aa...)
+	return nil
 }
