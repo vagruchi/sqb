@@ -325,9 +325,18 @@ type Arg struct {
 }
 
 func (a Arg) WriteSQLTo(st SQLWriter) error {
-	_, err := st.Write([]byte(`?`))
-	if err != nil {
-		return err
+
+	if cp, ok := st.(CustomPlaceholder); ok {
+		err := cp.WritePlaceholder()
+		if err != nil {
+			return err
+		}
+	} else {
+		_, err := st.Write([]byte(`?`))
+		if err != nil {
+			return err
+		}
 	}
+
 	return st.AddArgs(a.V)
 }
