@@ -10,6 +10,7 @@ type SelectStmt struct {
 	From        FromStmt
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
+	GroupByStmt GroupByStmt
 }
 
 func (cs SelectStmt) Distinct() SelectStmt {
@@ -21,6 +22,12 @@ func (cs SelectStmt) Distinct() SelectStmt {
 func (cs SelectStmt) OrderBy(ob ...OrderByElem) SelectStmt {
 	cp := cs
 	cp.OrderByStmt.Elems = ob
+	return cp
+}
+
+func (cs SelectStmt) GroupBy(cc ...Col) SelectStmt {
+	cp := cs
+	cp.GroupByStmt.Cols = cc
 	return cp
 }
 
@@ -87,6 +94,18 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	err = s.From.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	if !s.GroupByStmt.IsEmpty() {
+		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+	}
+
+	err = s.GroupByStmt.WriteSQLTo(st)
 	if err != nil {
 		return err
 	}
@@ -466,5 +485,106 @@ func Desc(c Col) OrderByElem {
 	return OrderByElem{
 		C:    c,
 		Kind: DescOrder,
+	}
+}
+
+type GroupByStmt struct {
+	Cols []Col
+}
+
+func (gbs GroupByStmt) IsEmpty() bool {
+	return len(gbs.Cols) == 0
+}
+
+func (gbs GroupByStmt) WriteSQLTo(st SQLWriter) error {
+	if len(gbs.Cols) == 0 {
+		return nil
+	}
+	_, err := st.WriteString("GROUP BY ")
+	if err != nil {
+		return err
+	}
+
+	err = gbs.Cols[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	if len(gbs.Cols) == 1 {
+		return nil
+	}
+
+	for _, el := range gbs.Cols[1:] {
+		_, err = st.WriteString(", ")
+		if err != nil {
+			return err
+		}
+		err = el.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type FuncCall struct {
+	Name string
+	Args []SQB
+}
+
+func (FuncCall) IsCol() {}
+
+func (fc FuncCall) WriteSQLTo(st SQLWriter) error {
+	_, err := st.WriteString(fc.Name + "(")
+	if err != nil {
+		return err
+	}
+
+	err = fc.writeArgs(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(")")
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fc FuncCall) writeArgs(st SQLWriter) error {
+	if len(fc.Args) == 0 {
+		return nil
+	}
+	err := fc.Args[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	if len(fc.Args) == 1 {
+		return nil
+	}
+
+	for _, el := range fc.Args[1:] {
+		_, err = st.WriteString(", ")
+		if err != nil {
+			return err
+		}
+		err = el.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Count(args ...Col) FuncCall {
+	a := make([]SQB, 0, len(args))
+	for _, e := range args {
+		a = append(a, e)
+	}
+	return FuncCall{
+		Name: "count",
+		Args: a,
 	}
 }
