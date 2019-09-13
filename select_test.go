@@ -83,8 +83,8 @@ func TestWriteSQLTo(t *testing.T) {
 		},
 		{
 			name:           "group by",
-			expectedRawSQL: `SELECT count(id) FROM users GROUP BY city_id`,
-			sqb:            From(TableName("users")).Select(Count(Coloumn("id"))).GroupBy(Coloumn("city_id")),
+			expectedRawSQL: `SELECT count(DISTINCT id) FROM users GROUP BY city_id`,
+			sqb:            From(TableName("users")).Select(Count(Coloumn("id")).Distinct()).GroupBy(Coloumn("city_id")),
 		},
 	}
 	for _, tt := range tests {
@@ -174,8 +174,8 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 		},
 		{
 			name:           "group by",
-			expectedRawSQL: `SELECT count(id) FROM users GROUP BY city_id`,
-			sqb:            From(TableName("users")).Select(Count(Coloumn("id"))).GroupBy(Coloumn("city_id")),
+			expectedRawSQL: `SELECT count(DISTINCT id) FROM users GROUP BY city_id`,
+			sqb:            From(TableName("users")).Select(Count(Coloumn("id")).Distinct()).GroupBy(Coloumn("city_id")),
 		},
 	}
 	t.ResetTimer()

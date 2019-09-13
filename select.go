@@ -527,17 +527,31 @@ func (gbs GroupByStmt) WriteSQLTo(st SQLWriter) error {
 	return nil
 }
 
-type FuncCall struct {
-	Name string
-	Args []SQB
+type AggrFuncCall struct {
+	Name       string
+	Args       []SQB
+	IsDistinct bool
 }
 
-func (FuncCall) IsCol() {}
+func (afc AggrFuncCall) Distinct() AggrFuncCall {
+	nafc := afc
+	nafc.IsDistinct = true
+	return nafc
+}
 
-func (fc FuncCall) WriteSQLTo(st SQLWriter) error {
+func (AggrFuncCall) IsCol() {}
+
+func (fc AggrFuncCall) WriteSQLTo(st SQLWriter) error {
 	_, err := st.WriteString(fc.Name + "(")
 	if err != nil {
 		return err
+	}
+
+	if fc.IsDistinct {
+		_, err := st.WriteString(`DISTINCT `)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = fc.writeArgs(st)
@@ -552,7 +566,7 @@ func (fc FuncCall) WriteSQLTo(st SQLWriter) error {
 	return nil
 }
 
-func (fc FuncCall) writeArgs(st SQLWriter) error {
+func (fc AggrFuncCall) writeArgs(st SQLWriter) error {
 	if len(fc.Args) == 0 {
 		return nil
 	}
@@ -578,12 +592,12 @@ func (fc FuncCall) writeArgs(st SQLWriter) error {
 	return nil
 }
 
-func Count(args ...Col) FuncCall {
+func Count(args ...Col) AggrFuncCall {
 	a := make([]SQB, 0, len(args))
 	for _, e := range args {
 		a = append(a, e)
 	}
-	return FuncCall{
+	return AggrFuncCall{
 		Name: "count",
 		Args: a,
 	}
