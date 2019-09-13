@@ -2,7 +2,6 @@ package sqb
 
 import (
 	"io"
-	"strings"
 )
 
 type SQLWriter interface {
@@ -15,19 +14,30 @@ type SQB interface {
 }
 
 type SelectStmt struct {
-	cols      []string
-	From      FromStmt
-	WhereStmt WhereStmt
+	Cols        []Col
+	From        FromStmt
+	WhereStmt   WhereStmt
+	OrderByStmt OrderByStmt
+}
+
+func (cs SelectStmt) OrderBy(ob ...OrderByElem) SelectStmt {
+	cp := cs
+	cp.OrderByStmt.Elems = ob
+	return cp
 }
 
 type FromStmt interface {
 	SQB
 }
 
-//TODO: make coloumns interface (coloumn names, functions)
-func (cs SelectStmt) Select(cc ...string) SelectStmt {
+type Col interface {
+	SQB
+	IsCol()
+}
+
+func (cs SelectStmt) Select(cc ...Col) SelectStmt {
 	cp := cs
-	cp.cols = cc
+	cp.Cols = cc
 	return cp
 }
 
@@ -39,13 +49,34 @@ func From(fs FromStmt) SelectStmt {
 }
 
 func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
-	rawcols := "*"
-
-	if len(s.cols) > 0 {
-		rawcols = strings.Join(s.cols, ", ")
+	_, err := st.Write([]byte(`SELECT `))
+	if err != nil {
+		return err
 	}
 
-	_, err := st.Write([]byte(`SELECT ` + rawcols + ` FROM `))
+	if len(s.Cols) == 0 {
+		_, err = st.Write([]byte("*"))
+		if err != nil {
+			return err
+		}
+	} else {
+		for i := 0; i < len(s.Cols)-1; i++ {
+			c := s.Cols[i]
+			err = c.WriteSQLTo(st)
+			if err != nil {
+				return err
+			}
+			_, err = st.Write([]byte(", "))
+			if err != nil {
+				return err
+			}
+		}
+		err = s.Cols[len(s.Cols)-1].WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	_, err = st.Write([]byte(" FROM "))
 	if err != nil {
 		return err
 	}
@@ -55,13 +86,26 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		return err
 	}
 
-	// TODO: Think about unnecessary space
-	_, err = st.Write([]byte(` `))
+	if !s.WhereStmt.IsEmpty() {
+		_, err = st.Write([]byte(` `))
+		if err != nil {
+			return err
+		}
+	}
+
+	err = s.WhereStmt.WriteSQLTo(st)
 	if err != nil {
 		return err
 	}
 
-	return s.WhereStmt.WriteSQLTo(st)
+	if !s.OrderByStmt.IsEmpty() {
+		_, err = st.Write([]byte(` `))
+		if err != nil {
+			return err
+		}
+	}
+
+	return s.OrderByStmt.WriteSQLTo(st)
 }
 
 func (cs SelectStmt) Where(exprs ...BoolExpr) SelectStmt {
@@ -251,6 +295,10 @@ type WhereStmt struct {
 	Exprs []BoolExpr
 }
 
+func (ws WhereStmt) IsEmpty() bool {
+	return len(ws.Exprs) == 0
+}
+
 func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	if len(ws.Exprs) == 0 {
 		return nil
@@ -315,6 +363,8 @@ func (Arg) IsComparable()     {}
 
 type Coloumn string
 
+func (Coloumn) IsCol() {}
+
 func (c Coloumn) WriteSQLTo(st SQLWriter) error {
 	_, err := st.Write([]byte(c))
 	return err
@@ -325,7 +375,6 @@ type Arg struct {
 }
 
 func (a Arg) WriteSQLTo(st SQLWriter) error {
-
 	if cp, ok := st.(CustomPlaceholder); ok {
 		err := cp.WritePlaceholder()
 		if err != nil {
@@ -339,4 +388,78 @@ func (a Arg) WriteSQLTo(st SQLWriter) error {
 	}
 
 	return st.AddArgs(a.V)
+}
+
+type OrderKind string
+
+const (
+	AscOrder  OrderKind = "ASC"
+	DescOrder OrderKind = "DESC"
+)
+
+type OrderByElem struct {
+	C    Col
+	Kind OrderKind
+}
+
+func (obe OrderByElem) WriteSQLTo(st SQLWriter) error {
+	err := obe.C.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.Write([]byte(" " + obe.Kind))
+	return err
+}
+
+type OrderByStmt struct {
+	Elems []OrderByElem
+}
+
+func (obs OrderByStmt) IsEmpty() bool {
+	return len(obs.Elems) == 0
+}
+
+func (obs OrderByStmt) WriteSQLTo(st SQLWriter) error {
+	if len(obs.Elems) == 0 {
+		return nil
+	}
+	_, err := st.Write([]byte("ORDER BY "))
+	if err != nil {
+		return err
+	}
+
+	err = obs.Elems[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	if len(obs.Elems) == 1 {
+		return nil
+	}
+
+	for _, el := range obs.Elems[1:] {
+		_, err = st.Write([]byte(", "))
+		if err != nil {
+			return err
+		}
+		err = el.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func Asc(c Col) OrderByElem {
+	return OrderByElem{
+		C:    c,
+		Kind: AscOrder,
+	}
+}
+
+func Desc(c Col) OrderByElem {
+	return OrderByElem{
+		C:    c,
+		Kind: DescOrder,
+	}
 }
