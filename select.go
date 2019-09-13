@@ -1,14 +1,5 @@
 package sqb
 
-import (
-	"io"
-)
-
-type SQLWriter interface {
-	io.Writer
-	AddArgs(...interface{}) error
-}
-
 type SQB interface {
 	WriteSQLTo(SQLWriter) error
 }

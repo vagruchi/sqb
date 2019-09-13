@@ -1,7 +1,6 @@
 package sqb
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -68,7 +67,7 @@ func TestWriteSQLTo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			sqb := tt.sqb
-			tsw := &testSQLWriter{}
+			tsw := &DefaultSQLWriter{}
 			if err := sqb.WriteSQLTo(tsw); (err != nil) != tt.wantErr {
 				t.Errorf("joinStmtWithOn.WriteSQLTo() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -79,14 +78,4 @@ func TestWriteSQLTo(t *testing.T) {
 			assert.Equal(t, tt.expectedArgs, tsw.Args)
 		})
 	}
-}
-
-type testSQLWriter struct {
-	strings.Builder
-	Args []interface{}
-}
-
-func (tsw *testSQLWriter) AddArgs(aa ...interface{}) error {
-	tsw.Args = append(tsw.Args, aa...)
-	return nil
 }
