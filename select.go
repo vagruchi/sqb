@@ -6,9 +6,16 @@ type SQB interface {
 
 type SelectStmt struct {
 	Cols        []Col
+	IsDistinct  bool
 	From        FromStmt
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
+}
+
+func (cs SelectStmt) Distinct() SelectStmt {
+	cp := cs
+	cp.IsDistinct = true
+	return cp
 }
 
 func (cs SelectStmt) OrderBy(ob ...OrderByElem) SelectStmt {
@@ -40,13 +47,20 @@ func From(fs FromStmt) SelectStmt {
 }
 
 func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
-	_, err := st.Write([]byte(`SELECT `))
+	_, err := st.WriteString(`SELECT `)
 	if err != nil {
 		return err
 	}
 
+	if s.IsDistinct {
+		_, err := st.WriteString(`DISTINCT `)
+		if err != nil {
+			return err
+		}
+	}
+
 	if len(s.Cols) == 0 {
-		_, err = st.Write([]byte("*"))
+		_, err = st.WriteString("*")
 		if err != nil {
 			return err
 		}
@@ -57,7 +71,7 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 			if err != nil {
 				return err
 			}
-			_, err = st.Write([]byte(", "))
+			_, err = st.WriteString(", ")
 			if err != nil {
 				return err
 			}
@@ -67,7 +81,7 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 			return err
 		}
 	}
-	_, err = st.Write([]byte(" FROM "))
+	_, err = st.WriteString(" FROM ")
 	if err != nil {
 		return err
 	}
@@ -78,7 +92,7 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	if !s.WhereStmt.IsEmpty() {
-		_, err = st.Write([]byte(` `))
+		_, err = st.WriteString(` `)
 		if err != nil {
 			return err
 		}
@@ -90,7 +104,7 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	if !s.OrderByStmt.IsEmpty() {
-		_, err = st.Write([]byte(` `))
+		_, err = st.WriteString(` `)
 		if err != nil {
 			return err
 		}
@@ -120,13 +134,13 @@ type JoinableSelect struct {
 }
 
 func (js JoinableSelect) WriteSQLTo(st SQLWriter) error {
-	if _, err := st.Write([]byte(`(`)); err != nil {
+	if _, err := st.WriteString(`(`); err != nil {
 		return err
 	}
 	if err := js.SelectStmt.WriteSQLTo(st); err != nil {
 		return err
 	}
-	_, err := st.Write([]byte(`) AS ` + js.AS))
+	_, err := st.WriteString(`) AS ` + js.AS)
 	return err
 }
 
@@ -160,7 +174,7 @@ func (js joinStmt) WriteSQLTo(st SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	_, err = st.Write([]byte(" " + js.kind + " JOIN "))
+	_, err = st.WriteString(" " + js.kind + " JOIN ")
 	if err != nil {
 		return err
 	}
@@ -188,7 +202,7 @@ func (jso joinStmtWithOn) WriteSQLTo(st SQLWriter) error {
 	if err := jso.joinStmt.WriteSQLTo(st); err != nil {
 		return err
 	}
-	_, err := st.Write([]byte(" ON " + jso.LeftCol + "=" + jso.RightCol))
+	_, err := st.WriteString(" ON " + jso.LeftCol + "=" + jso.RightCol)
 	return err
 }
 
@@ -264,7 +278,7 @@ func (tns TableNameStmt) As(name string) TableNameAsStmt {
 }
 
 func (tn TableNameStmt) WriteSQLTo(st SQLWriter) error {
-	_, err := st.Write([]byte(tn))
+	_, err := st.WriteString(string(tn))
 	return err
 }
 
@@ -278,7 +292,7 @@ func (tn TableNameAsStmt) WriteSQLTo(st SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	_, err = st.Write([]byte(` AS ` + tn.AS))
+	_, err = st.WriteString(` AS ` + tn.AS)
 	return err
 }
 
@@ -294,7 +308,7 @@ func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	if len(ws.Exprs) == 0 {
 		return nil
 	}
-	_, err := st.Write([]byte(`WHERE `))
+	_, err := st.WriteString(`WHERE `)
 	if err != nil {
 		return err
 	}
@@ -308,7 +322,7 @@ func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	for _, ex := range ws.Exprs[1:] {
-		_, err := st.Write([]byte(`, `))
+		_, err := st.WriteString(`, `)
 		if err != nil {
 			return err
 		}
@@ -337,7 +351,7 @@ func (ee EqExpr) WriteSQLTo(st SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	_, err = st.Write([]byte(`=`))
+	_, err = st.WriteString(`=`)
 	if err != nil {
 		return err
 	}
@@ -357,7 +371,7 @@ type Coloumn string
 func (Coloumn) IsCol() {}
 
 func (c Coloumn) WriteSQLTo(st SQLWriter) error {
-	_, err := st.Write([]byte(c))
+	_, err := st.WriteString(string(c))
 	return err
 }
 
@@ -372,7 +386,7 @@ func (a Arg) WriteSQLTo(st SQLWriter) error {
 			return err
 		}
 	} else {
-		_, err := st.Write([]byte(`?`))
+		_, err := st.WriteString(`?`)
 		if err != nil {
 			return err
 		}
@@ -398,7 +412,7 @@ func (obe OrderByElem) WriteSQLTo(st SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	_, err = st.Write([]byte(" " + obe.Kind))
+	_, err = st.WriteString(" " + string(obe.Kind))
 	return err
 }
 
@@ -414,7 +428,7 @@ func (obs OrderByStmt) WriteSQLTo(st SQLWriter) error {
 	if len(obs.Elems) == 0 {
 		return nil
 	}
-	_, err := st.Write([]byte("ORDER BY "))
+	_, err := st.WriteString("ORDER BY ")
 	if err != nil {
 		return err
 	}
@@ -429,7 +443,7 @@ func (obs OrderByStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	for _, el := range obs.Elems[1:] {
-		_, err = st.Write([]byte(", "))
+		_, err = st.WriteString(", ")
 		if err != nil {
 			return err
 		}

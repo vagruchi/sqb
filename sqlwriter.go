@@ -1,13 +1,12 @@
 package sqb
 
 import (
-	"io"
 	"strings"
 )
 
 type SQLWriter interface {
-	io.Writer
 	AddArgs(...interface{}) error
+	WriteString(string) (int, error)
 }
 
 type DefaultSQLWriter struct {

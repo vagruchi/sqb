@@ -6,7 +6,7 @@ type RawSQL struct {
 }
 
 func (rsql RawSQL) WriteSQLTo(st SQLWriter) error {
-	_, err := st.Write([]byte(rsql.Query))
+	_, err := st.WriteString(rsql.Query)
 	if err != nil {
 		return err
 	}
