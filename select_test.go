@@ -63,6 +63,19 @@ func TestWriteSQLTo(t *testing.T) {
 			expectedArgs:   []interface{}{10},
 			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})).OrderBy(Asc(Coloumn("city")), Desc(Coloumn("region"))),
 		},
+		{
+			name:           "4 tables join",
+			expectedRawSQL: `SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id RIGHT JOIN cities ON users.city_id=cities.id LEFT JOIN regions ON cities.region_id=regions.id`,
+			sqb: From(
+				LeftJoin(
+					RightJoin(
+						LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
+						TableName("cities"), On("users.city_id", "cities.id"),
+					),
+					TableName("regions"), On("cities.region_id", "regions.id"),
+				),
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
