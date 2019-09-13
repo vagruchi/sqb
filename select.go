@@ -598,7 +598,51 @@ func Count(args ...Col) AggrFuncCall {
 		a = append(a, e)
 	}
 	return AggrFuncCall{
-		Name: "count",
+		Name: "COUNT",
+		Args: a,
+	}
+}
+
+func Max(args ...Col) AggrFuncCall {
+	a := make([]SQB, 0, len(args))
+	for _, e := range args {
+		a = append(a, e)
+	}
+	return AggrFuncCall{
+		Name: "MAX",
+		Args: a,
+	}
+}
+
+func Min(args ...Col) AggrFuncCall {
+	a := make([]SQB, 0, len(args))
+	for _, e := range args {
+		a = append(a, e)
+	}
+	return AggrFuncCall{
+		Name: "MIN",
+		Args: a,
+	}
+}
+
+func Sum(args ...Col) AggrFuncCall {
+	a := make([]SQB, 0, len(args))
+	for _, e := range args {
+		a = append(a, e)
+	}
+	return AggrFuncCall{
+		Name: "SUM",
+		Args: a,
+	}
+}
+
+func Avg(args ...Col) AggrFuncCall {
+	a := make([]SQB, 0, len(args))
+	for _, e := range args {
+		a = append(a, e)
+	}
+	return AggrFuncCall{
+		Name: "AVG",
 		Args: a,
 	}
 }
