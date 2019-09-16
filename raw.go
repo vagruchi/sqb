@@ -15,3 +15,5 @@ func (rsql RawSQL) WriteSQLTo(st SQLWriter) error {
 
 func (RawSQL) IsJoinable()   {}
 func (RawSQL) IsComparable() {}
+func (RawSQL) IsTable()      {}
+func (RawSQL) IsCol()        {}

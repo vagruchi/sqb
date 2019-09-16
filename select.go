@@ -7,7 +7,7 @@ type SQB interface {
 type SelectStmt struct {
 	Cols        []Col
 	IsDistinct  bool
-	From        FromStmt
+	From        Table
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
 	GroupByStmt GroupByStmt
@@ -31,9 +31,20 @@ func (cs SelectStmt) GroupBy(cc ...Col) SelectStmt {
 	return cp
 }
 
-type FromStmt interface {
+type Table interface {
 	SQB
+	IsTable()
 }
+
+func (TableNameAsStmt) IsTable()   {}
+func (InnerJoinStmt) IsTable()     {}
+func (LeftJoinStmt) IsTable()      {}
+func (FullOuterJoinStmt) IsTable() {}
+func (RightJoinStmt) IsTable()     {}
+func (CrossJoinStmt) IsTable()     {}
+func (TableNameStmt) IsTable()     {}
+func (SelectStmt) IsTable()        {}
+func (JoinableSelect) IsTable()    {}
 
 type Col interface {
 	SQB
@@ -46,7 +57,7 @@ func (cs SelectStmt) Select(cc ...Col) SelectStmt {
 	return cp
 }
 
-func From(fs FromStmt) SelectStmt {
+func From(fs Table) SelectStmt {
 	copycs := SelectStmt{
 		From: fs,
 	}

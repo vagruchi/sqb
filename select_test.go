@@ -6,12 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	_ SQB      = FromStmt(nil)
-	_ Joinable = InnerJoinStmt{}
-	_ Joinable = LeftJoinStmt{}
-)
-
 func TestWriteSQLTo(t *testing.T) {
 	var tests = []struct {
 		name           string
