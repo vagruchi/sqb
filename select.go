@@ -1,5 +1,9 @@
 package sqb
 
+import (
+	"strconv"
+)
+
 type SQB interface {
 	WriteSQLTo(SQLWriter) error
 }
@@ -11,6 +15,8 @@ type SelectStmt struct {
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
 	GroupByStmt GroupByStmt
+	LimitStmt   LimitStmt
+	OffsetStmt  OffsetStmt
 }
 
 func (cs SelectStmt) Distinct() SelectStmt {
@@ -109,44 +115,89 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		return err
 	}
 
-	if !s.GroupByStmt.IsEmpty() {
+	if !s.GroupByStmt.Empty() {
 		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.GroupByStmt.WriteSQLTo(st)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = s.GroupByStmt.WriteSQLTo(st)
-	if err != nil {
-		return err
-	}
-
-	if !s.WhereStmt.IsEmpty() {
+	if !s.WhereStmt.Empty() {
 		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.WhereStmt.WriteSQLTo(st)
 		if err != nil {
 			return err
 		}
 	}
 
-	err = s.WhereStmt.WriteSQLTo(st)
-	if err != nil {
-		return err
-	}
-
-	if !s.OrderByStmt.IsEmpty() {
+	if !s.OrderByStmt.Empty() {
 		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.OrderByStmt.WriteSQLTo(st)
 		if err != nil {
 			return err
 		}
 	}
 
-	return s.OrderByStmt.WriteSQLTo(st)
+	if !s.LimitStmt.Empty() {
+		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.LimitStmt.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !s.OffsetStmt.Empty() {
+		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.OffsetStmt.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (cs SelectStmt) Where(exprs ...BoolExpr) SelectStmt {
 	cp := cs
 	cp.WhereStmt = WhereStmt{
 		Exprs: exprs,
+	}
+	return cp
+}
+
+func (cs SelectStmt) Limit(limit uint64) SelectStmt {
+	cp := cs
+	cp.LimitStmt = LimitStmt{
+		V: limit,
+	}
+	return cp
+}
+
+func (cs SelectStmt) Offset(offset uint64) SelectStmt {
+	cp := cs
+	cp.OffsetStmt = OffsetStmt{
+		V: offset,
 	}
 	return cp
 }
@@ -330,7 +381,7 @@ type WhereStmt struct {
 	Exprs []BoolExpr
 }
 
-func (ws WhereStmt) IsEmpty() bool {
+func (ws WhereStmt) Empty() bool {
 	return len(ws.Exprs) == 0
 }
 
@@ -514,7 +565,7 @@ type OrderByStmt struct {
 	Elems []OrderByElem
 }
 
-func (obs OrderByStmt) IsEmpty() bool {
+func (obs OrderByStmt) Empty() bool {
 	return len(obs.Elems) == 0
 }
 
@@ -567,7 +618,7 @@ type GroupByStmt struct {
 	Cols []Col
 }
 
-func (gbs GroupByStmt) IsEmpty() bool {
+func (gbs GroupByStmt) Empty() bool {
 	return len(gbs.Cols) == 0
 }
 
@@ -720,4 +771,50 @@ func Avg(args ...Col) AggrFuncCall {
 		Name: "AVG",
 		Args: a,
 	}
+}
+
+const (
+	OffsetKeyword = Keyword("OFFSET")
+	LimitKeyword  = Keyword("LIMIT")
+)
+
+type Keyword string
+
+func (k Keyword) WriteSQLTo(st SQLWriter) error {
+	_, err := st.WriteString(string(k))
+	return err
+}
+
+type OffsetStmt struct {
+	V uint64
+}
+
+func (os OffsetStmt) Empty() bool {
+	return os.V == 0
+}
+
+func (os OffsetStmt) WriteSQLTo(st SQLWriter) error {
+	err := OffsetKeyword.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.WriteString(" " + strconv.FormatUint(os.V, 10))
+	return err
+}
+
+type LimitStmt struct {
+	V uint64
+}
+
+func (ls LimitStmt) Empty() bool {
+	return ls.V == 0
+}
+
+func (ls LimitStmt) WriteSQLTo(st SQLWriter) error {
+	err := LimitKeyword.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.WriteString(" " + strconv.FormatUint(ls.V, 10))
+	return err
 }
