@@ -338,11 +338,15 @@ func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	if len(ws.Exprs) == 0 {
 		return nil
 	}
-	_, err := st.WriteString(`WHERE `)
+	_, err := st.WriteString(`WHERE (`)
 	if err != nil {
 		return err
 	}
 	err = ws.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+	_, err = st.WriteString(`)`)
 	if err != nil {
 		return err
 	}
@@ -352,14 +356,24 @@ func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	}
 
 	for _, ex := range ws.Exprs[1:] {
-		_, err := st.WriteString(`, `)
+		_, err := st.WriteString(` AND `)
 		if err != nil {
 			return err
 		}
+		_, err = st.WriteString(`(`)
+		if err != nil {
+			return err
+		}
+
 		err = ex.WriteSQLTo(st)
 		if err != nil {
 			return err
 		}
+		_, err = st.WriteString(`)`)
+		if err != nil {
+			return err
+		}
+
 	}
 	return nil
 }
@@ -386,6 +400,56 @@ func (ee EqExpr) WriteSQLTo(st SQLWriter) error {
 		return err
 	}
 	return ee.B.WriteSQLTo(st)
+}
+
+type OrExpr struct {
+	Exprs []BoolExpr
+}
+
+func (oe OrExpr) WriteSQLTo(st SQLWriter) error {
+	if len(oe.Exprs) == 0 {
+		return nil
+	}
+	_, err := st.WriteString(`(`)
+	if err != nil {
+		return err
+	}
+
+	err = oe.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(`)`)
+	if err != nil {
+		return err
+	}
+
+	if len(oe.Exprs) == 1 {
+		return nil
+	}
+
+	for _, ex := range oe.Exprs[1:] {
+		_, err := st.WriteString(` OR `)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`(`)
+		if err != nil {
+			return err
+		}
+
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`)`)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
 }
 
 type Comparable interface {
