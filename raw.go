@@ -10,7 +10,7 @@ func (rsql RawSQL) WriteSQLTo(st SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	return st.AddArgs(rsql.Args...)
+	return st.AppendRawArgs(rsql.Args...)
 }
 
 func (RawSQL) IsJoinable()   {}

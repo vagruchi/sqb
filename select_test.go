@@ -102,6 +102,38 @@ func TestWriteSQLTo(t *testing.T) {
 	}
 }
 
+func TestWriteSQLToPostgre(t *testing.T) {
+	var tests = []struct {
+		name           string
+		sqb            SQB
+		wantErr        bool
+		expectedRawSQL string
+		expectedArgs   []interface{}
+	}{
+
+		{
+			name:           "where",
+			expectedRawSQL: "SELECT * FROM users WHERE ((city=$1) OR (city=$2))",
+			expectedArgs:   []interface{}{10, 15},
+			sqb:            From(TableName("users")).Where(Or(Eq(Coloumn("city"), Arg{V: 10}), Eq(Coloumn("city"), Arg{V: 15}))),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sqb := tt.sqb
+			tsw := &PostgreSQLWriter{}
+			if err := sqb.WriteSQLTo(tsw); (err != nil) != tt.wantErr {
+				t.Errorf("WriteSQLTo() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			builded := tsw.String()
+			if builded != tt.expectedRawSQL {
+				t.Errorf("WriteSQLTo() raw SQL expected = %v, actual = %v", tt.expectedRawSQL, builded)
+			}
+			assert.Equal(t, tt.expectedArgs, tsw.Args)
+		})
+	}
+}
+
 func BenchmarkWriteSQLTo(t *testing.B) {
 	var tests = []struct {
 		name           string

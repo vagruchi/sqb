@@ -457,6 +457,12 @@ type OrExpr struct {
 	Exprs []BoolExpr
 }
 
+func Or(expr ...BoolExpr) OrExpr {
+	return OrExpr{
+		Exprs: expr,
+	}
+}
+
 func (oe OrExpr) WriteSQLTo(st SQLWriter) error {
 	if len(oe.Exprs) == 0 {
 		return nil
@@ -525,18 +531,6 @@ type Arg struct {
 }
 
 func (a Arg) WriteSQLTo(st SQLWriter) error {
-	if cp, ok := st.(CustomPlaceholder); ok {
-		err := cp.WritePlaceholder()
-		if err != nil {
-			return err
-		}
-	} else {
-		_, err := st.WriteString(`?`)
-		if err != nil {
-			return err
-		}
-	}
-
 	return st.AddArgs(a.V)
 }
 
