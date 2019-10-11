@@ -236,6 +236,7 @@ func (FullOuterJoinStmt) IsJoinable() {}
 func (RightJoinStmt) IsJoinable()     {}
 func (CrossJoinStmt) IsJoinable()     {}
 func (TableNameStmt) IsJoinable()     {}
+func (JoinableSelect) IsJoinable()    {}
 
 type joinStmt struct {
 	kind                  string
