@@ -18,7 +18,7 @@ func TestWriteSQLTo(t *testing.T) {
 			name:           "left join",
 			expectedRawSQL: "users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: LeftJoin(
-				TableName("users"), TableName("posts"), On("users.id", "posts.user_id"),
+				TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id")),
 			),
 		},
 		{
@@ -30,14 +30,14 @@ func TestWriteSQLTo(t *testing.T) {
 			name:           "select from left join",
 			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
 			),
 		},
 		{
 			name:           "select ids from left join",
 			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
 			).Select(Coloumn("users.id")),
 		},
 		{
@@ -63,10 +63,10 @@ func TestWriteSQLTo(t *testing.T) {
 			sqb: From(
 				LeftJoin(
 					RightJoin(
-						LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
-						TableName("cities"), On("users.city_id", "cities.id"),
+						LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
+						TableName("cities"), Eq(Coloumn("users.city_id"), Coloumn("cities.id")),
 					),
-					TableName("regions"), On("cities.region_id", "regions.id"),
+					TableName("regions"), Eq(Coloumn("cities.region_id"), Coloumn("regions.id")),
 				),
 			),
 		},
@@ -146,7 +146,7 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			name:           "left join",
 			expectedRawSQL: "users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: LeftJoin(
-				TableName("users"), TableName("posts"), On("users.id", "posts.user_id"),
+				TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id")),
 			),
 		},
 		{
@@ -158,14 +158,14 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			name:           "select from left join",
 			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
 			),
 		},
 		{
 			name:           "select ids from left join",
 			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
 			).Select(Coloumn("users.id")),
 		},
 		{
@@ -191,10 +191,10 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			sqb: From(
 				LeftJoin(
 					RightJoin(
-						LeftJoin(TableName("users"), TableName("posts"), On("users.id", "posts.user_id")),
-						TableName("cities"), On("users.city_id", "cities.id"),
+						LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
+						TableName("cities"), Eq(Coloumn("users.city_id"), Coloumn("cities.id")),
 					),
-					TableName("regions"), On("cities.region_id", "regions.id"),
+					TableName("regions"), Eq(Coloumn("cities.region_id"), Coloumn("regions.id")),
 				),
 			),
 		},

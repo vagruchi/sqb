@@ -17,3 +17,4 @@ func (RawSQL) IsJoinable()   {}
 func (RawSQL) IsComparable() {}
 func (RawSQL) IsTable()      {}
 func (RawSQL) IsCol()        {}
+func (RawSQL) IsOnExpr()     {}

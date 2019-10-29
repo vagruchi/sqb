@@ -42,15 +42,15 @@ type Table interface {
 	IsTable()
 }
 
-func (TableNameAsStmt) IsTable()   {}
-func (InnerJoinStmt) IsTable()     {}
-func (LeftJoinStmt) IsTable()      {}
-func (FullOuterJoinStmt) IsTable() {}
-func (RightJoinStmt) IsTable()     {}
-func (CrossJoinStmt) IsTable()     {}
-func (TableNameStmt) IsTable()     {}
-func (SelectStmt) IsTable()        {}
-func (JoinableSelect) IsTable()    {}
+func (TableIdentifierAlias) IsTable() {}
+func (InnerJoinStmt) IsTable()        {}
+func (LeftJoinStmt) IsTable()         {}
+func (FullOuterJoinStmt) IsTable()    {}
+func (RightJoinStmt) IsTable()        {}
+func (CrossJoinStmt) IsTable()        {}
+func (TableIdentifier) IsTable()      {}
+func (SelectStmt) IsTable()           {}
+func (SubqueryAlias) IsTable()        {}
 
 type Col interface {
 	SQB
@@ -194,6 +194,7 @@ func (cs SelectStmt) Limit(limit uint64) SelectStmt {
 	return cp
 }
 
+// TODO: allow it only for limited query
 func (cs SelectStmt) Offset(offset uint64) SelectStmt {
 	cp := cs
 	cp.OffsetStmt = OffsetStmt{
@@ -202,19 +203,19 @@ func (cs SelectStmt) Offset(offset uint64) SelectStmt {
 	return cp
 }
 
-func (s SelectStmt) As(name string) JoinableSelect {
-	return JoinableSelect{
+func (s SelectStmt) As(name string) SubqueryAlias {
+	return SubqueryAlias{
 		SelectStmt: s,
 		AS:         name,
 	}
 }
 
-type JoinableSelect struct {
+type SubqueryAlias struct {
 	SelectStmt
 	AS string
 }
 
-func (js JoinableSelect) WriteSQLTo(st SQLWriter) error {
+func (js SubqueryAlias) WriteSQLTo(st SQLWriter) error {
 	if _, err := st.WriteString(`(`); err != nil {
 		return err
 	}
@@ -226,7 +227,7 @@ func (js JoinableSelect) WriteSQLTo(st SQLWriter) error {
 }
 
 type Joinable interface {
-	SQB
+	Table
 	IsJoinable()
 }
 
@@ -235,8 +236,8 @@ func (LeftJoinStmt) IsJoinable()      {}
 func (FullOuterJoinStmt) IsJoinable() {}
 func (RightJoinStmt) IsJoinable()     {}
 func (CrossJoinStmt) IsJoinable()     {}
-func (TableNameStmt) IsJoinable()     {}
-func (JoinableSelect) IsJoinable()    {}
+func (TableIdentifier) IsJoinable()   {}
+func (SubqueryAlias) IsJoinable()     {}
 
 type joinStmt struct {
 	kind                  string
@@ -267,16 +268,149 @@ func (js joinStmt) WriteSQLTo(st SQLWriter) error {
 	return nil
 }
 
-type joinStmtWithOn struct {
-	joinStmt
-	LeftCol, RightCol string
+type OnExpr interface {
+	SQB
+	IsOnExpr()
 }
 
-func newjoinStmtWithOn(left, right Joinable, on OnStmt, kind string) joinStmtWithOn {
+func (EqExpr) IsOnExpr()    {}
+func (OnAndExpr) IsOnExpr() {}
+
+type joinStmtWithOn struct {
+	joinStmt
+	on OnExpr
+}
+
+type OnAndExpr struct {
+	Exprs []OnExpr
+}
+
+func (oe OnAndExpr) WriteSQLTo(st SQLWriter) error {
+	if len(oe.Exprs) == 0 {
+		return nil
+	}
+	_, err := st.WriteString(`(`)
+	if err != nil {
+		return err
+	}
+
+	err = oe.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(`)`)
+	if err != nil {
+		return err
+	}
+
+	if len(oe.Exprs) == 1 {
+		return nil
+	}
+
+	for _, ex := range oe.Exprs[1:] {
+		_, err := st.WriteString(` AND `)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`(`)
+		if err != nil {
+			return err
+		}
+
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`)`)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+type OnOrExpr struct {
+	Exprs []OnExpr
+}
+
+func (oe OnOrExpr) WriteSQLTo(st SQLWriter) error {
+	if len(oe.Exprs) == 0 {
+		return nil
+	}
+	_, err := st.WriteString(`(`)
+	if err != nil {
+		return err
+	}
+
+	err = oe.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(`)`)
+	if err != nil {
+		return err
+	}
+
+	if len(oe.Exprs) == 1 {
+		return nil
+	}
+
+	for _, ex := range oe.Exprs[1:] {
+		_, err := st.WriteString(` OR `)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`(`)
+		if err != nil {
+			return err
+		}
+
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`)`)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+type OnInExpr struct {
+	// improve name
+	Some Comparable
+	In   []Comparable
+}
+
+func (oe OnInExpr) WriteSQLTo(st SQLWriter) error {
+	err := oe.Some.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(` IN `)
+	if err != nil {
+		return err
+	}
+
+	for _, ex := range oe.In {
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func newjoinStmtWithOn(left, right Joinable, on OnExpr, kind string) joinStmtWithOn {
 	return joinStmtWithOn{
 		joinStmt: newJoinStmt(left, right, kind),
-		LeftCol:  on.A,
-		RightCol: on.B,
+		on:       on,
 	}
 }
 
@@ -284,23 +418,17 @@ func (jso joinStmtWithOn) WriteSQLTo(st SQLWriter) error {
 	if err := jso.joinStmt.WriteSQLTo(st); err != nil {
 		return err
 	}
-	_, err := st.WriteString(" ON " + jso.LeftCol + "=" + jso.RightCol)
-	return err
+	if _, err := st.WriteString(" ON "); err != nil {
+		return err
+	}
+	return jso.on.WriteSQLTo(st)
 }
 
 type InnerJoinStmt struct {
 	joinStmtWithOn
 }
 
-type OnStmt struct {
-	A, B string
-}
-
-func On(a, b string) OnStmt {
-	return OnStmt{A: a, B: b}
-}
-
-func InnerJoin(left, right Joinable, on OnStmt) InnerJoinStmt {
+func InnerJoin(left, right Joinable, on OnExpr) InnerJoinStmt {
 	return InnerJoinStmt{
 		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "INNER"),
 	}
@@ -310,7 +438,7 @@ type LeftJoinStmt struct {
 	joinStmtWithOn
 }
 
-func LeftJoin(left, right Joinable, on OnStmt) LeftJoinStmt {
+func LeftJoin(left, right Joinable, on OnExpr) LeftJoinStmt {
 	return LeftJoinStmt{
 		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "LEFT"),
 	}
@@ -320,7 +448,7 @@ type FullOuterJoinStmt struct {
 	joinStmtWithOn
 }
 
-func FullOuterJoin(left, right Joinable, on OnStmt) FullOuterJoinStmt {
+func FullOuterJoin(left, right Joinable, on OnExpr) FullOuterJoinStmt {
 	return FullOuterJoinStmt{
 		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "FULL OUTER"),
 	}
@@ -330,7 +458,7 @@ type RightJoinStmt struct {
 	joinStmtWithOn
 }
 
-func RightJoin(left, right Joinable, on OnStmt) RightJoinStmt {
+func RightJoin(left, right Joinable, on OnExpr) RightJoinStmt {
 	return RightJoinStmt{
 		joinStmtWithOn: newjoinStmtWithOn(left, right, on, "RIGHT"),
 	}
@@ -346,31 +474,31 @@ func CrossJoin(l, r Joinable) CrossJoinStmt {
 	}
 }
 
-type TableNameStmt string
+type TableIdentifier string
 
-func TableName(n string) TableNameStmt {
-	return TableNameStmt(n)
+func TableName(n string) TableIdentifier {
+	return TableIdentifier(n)
 }
 
-func (tns TableNameStmt) As(name string) TableNameAsStmt {
-	return TableNameAsStmt{
-		TableNameStmt: tns,
-		AS:            name,
+func (tns TableIdentifier) As(name string) TableIdentifierAlias {
+	return TableIdentifierAlias{
+		TableIdentifier: tns,
+		AS:              name,
 	}
 }
 
-func (tn TableNameStmt) WriteSQLTo(st SQLWriter) error {
+func (tn TableIdentifier) WriteSQLTo(st SQLWriter) error {
 	_, err := st.WriteString(string(tn))
 	return err
 }
 
-type TableNameAsStmt struct {
-	TableNameStmt
+type TableIdentifierAlias struct {
+	TableIdentifier
 	AS string
 }
 
-func (tn TableNameAsStmt) WriteSQLTo(st SQLWriter) error {
-	err := tn.TableNameStmt.WriteSQLTo(st)
+func (tn TableIdentifierAlias) WriteSQLTo(st SQLWriter) error {
+	err := tn.TableIdentifier.WriteSQLTo(st)
 	if err != nil {
 		return err
 	}
