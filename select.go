@@ -638,6 +638,62 @@ func (oe OrExpr) WriteSQLTo(st SQLWriter) error {
 	return nil
 }
 
+type AndExpr struct {
+	Exprs []BoolExpr
+}
+
+func And(expr ...BoolExpr) AndExpr {
+	return AndExpr{
+		Exprs: expr,
+	}
+}
+
+func (ae AndExpr) WriteSQLTo(st SQLWriter) error {
+	if len(ae.Exprs) == 0 {
+		return nil
+	}
+	_, err := st.WriteString(`(`)
+	if err != nil {
+		return err
+	}
+
+	err = ae.Exprs[0].WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
+	_, err = st.WriteString(`)`)
+	if err != nil {
+		return err
+	}
+
+	if len(ae.Exprs) == 1 {
+		return nil
+	}
+
+	for _, ex := range ae.Exprs[1:] {
+		_, err := st.WriteString(` AND `)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`(`)
+		if err != nil {
+			return err
+		}
+
+		err = ex.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+		_, err = st.WriteString(`)`)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
 type Comparable interface {
 	IsComparable()
 	SQB
