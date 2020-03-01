@@ -18,7 +18,7 @@ func TestWriteSQLTo(t *testing.T) {
 			name:           "left join",
 			expectedRawSQL: "users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: LeftJoin(
-				TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id")),
+				TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id")),
 			),
 		},
 		{
@@ -30,15 +30,15 @@ func TestWriteSQLTo(t *testing.T) {
 			name:           "select from left join",
 			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
 			),
 		},
 		{
 			name:           "select ids from left join",
 			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
-			).Select(Coloumn("users.id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
+			).Select(Column("users.id")),
 		},
 		{
 			name:           "subquery",
@@ -49,13 +49,13 @@ func TestWriteSQLTo(t *testing.T) {
 			name:           "where",
 			expectedRawSQL: "SELECT * FROM users WHERE (city=?)",
 			expectedArgs:   []interface{}{10},
-			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})),
+			sqb:            From(TableName("users")).Where(Eq(Column("city"), Arg{V: 10})),
 		},
 		{
 			name:           "order by",
 			expectedRawSQL: "SELECT * FROM users WHERE (city=?) ORDER BY city ASC, region DESC",
 			expectedArgs:   []interface{}{10},
-			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})).OrderBy(Asc(Coloumn("city")), Desc(Coloumn("region"))),
+			sqb:            From(TableName("users")).Where(Eq(Column("city"), Arg{V: 10})).OrderBy(Asc(Column("city")), Desc(Column("region"))),
 		},
 		{
 			name:           "4 tables join",
@@ -63,10 +63,10 @@ func TestWriteSQLTo(t *testing.T) {
 			sqb: From(
 				LeftJoin(
 					RightJoin(
-						LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
-						TableName("cities"), Eq(Coloumn("users.city_id"), Coloumn("cities.id")),
+						LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
+						TableName("cities"), Eq(Column("users.city_id"), Column("cities.id")),
 					),
-					TableName("regions"), Eq(Coloumn("cities.region_id"), Coloumn("regions.id")),
+					TableName("regions"), Eq(Column("cities.region_id"), Column("regions.id")),
 				),
 			),
 		},
@@ -78,7 +78,7 @@ func TestWriteSQLTo(t *testing.T) {
 		{
 			name:           "group by",
 			expectedRawSQL: `SELECT COUNT(DISTINCT id) FROM users GROUP BY city_id`,
-			sqb:            From(TableName("users")).Select(Count(Coloumn("id")).Distinct()).GroupBy(Coloumn("city_id")),
+			sqb:            From(TableName("users")).Select(Count(Column("id")).Distinct()).GroupBy(Column("city_id")),
 		},
 		{
 			name:           "offset and limit",
@@ -115,7 +115,7 @@ func TestWriteSQLToPostgre(t *testing.T) {
 			name:           "where",
 			expectedRawSQL: "SELECT * FROM users WHERE ((city=$1) OR (city=$2))",
 			expectedArgs:   []interface{}{10, 15},
-			sqb:            From(TableName("users")).Where(Or(Eq(Coloumn("city"), Arg{V: 10}), Eq(Coloumn("city"), Arg{V: 15}))),
+			sqb:            From(TableName("users")).Where(Or(Eq(Column("city"), Arg{V: 10}), Eq(Column("city"), Arg{V: 15}))),
 		},
 	}
 	for _, tt := range tests {
@@ -146,7 +146,7 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			name:           "left join",
 			expectedRawSQL: "users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: LeftJoin(
-				TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id")),
+				TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id")),
 			),
 		},
 		{
@@ -158,15 +158,15 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			name:           "select from left join",
 			expectedRawSQL: "SELECT * FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
 			),
 		},
 		{
 			name:           "select ids from left join",
 			expectedRawSQL: "SELECT users.id FROM users LEFT JOIN posts ON users.id=posts.user_id",
 			sqb: From(
-				LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
-			).Select(Coloumn("users.id")),
+				LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
+			).Select(Column("users.id")),
 		},
 		{
 			name:           "subquery",
@@ -177,13 +177,13 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			name:           "where",
 			expectedRawSQL: "SELECT * FROM users WHERE (city=?)",
 			expectedArgs:   []interface{}{10},
-			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})),
+			sqb:            From(TableName("users")).Where(Eq(Column("city"), Arg{V: 10})),
 		},
 		{
 			name:           "order by",
 			expectedRawSQL: "SELECT * FROM users WHERE (city=?) ORDER BY city ASC, region DESC",
 			expectedArgs:   []interface{}{10},
-			sqb:            From(TableName("users")).Where(Eq(Coloumn("city"), Arg{V: 10})).OrderBy(Asc(Coloumn("city")), Desc(Coloumn("region"))),
+			sqb:            From(TableName("users")).Where(Eq(Column("city"), Arg{V: 10})).OrderBy(Asc(Column("city")), Desc(Column("region"))),
 		},
 		{
 			name:           "4 tables join",
@@ -191,10 +191,10 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 			sqb: From(
 				LeftJoin(
 					RightJoin(
-						LeftJoin(TableName("users"), TableName("posts"), Eq(Coloumn("users.id"), Coloumn("posts.user_id"))),
-						TableName("cities"), Eq(Coloumn("users.city_id"), Coloumn("cities.id")),
+						LeftJoin(TableName("users"), TableName("posts"), Eq(Column("users.id"), Column("posts.user_id"))),
+						TableName("cities"), Eq(Column("users.city_id"), Column("cities.id")),
 					),
-					TableName("regions"), Eq(Coloumn("cities.region_id"), Coloumn("regions.id")),
+					TableName("regions"), Eq(Column("cities.region_id"), Column("regions.id")),
 				),
 			),
 		},
@@ -206,7 +206,7 @@ func BenchmarkWriteSQLTo(t *testing.B) {
 		{
 			name:           "group by",
 			expectedRawSQL: `SELECT COUNT(DISTINCT id) FROM users GROUP BY city_id`,
-			sqb:            From(TableName("users")).Select(Count(Coloumn("id")).Distinct()).GroupBy(Coloumn("city_id")),
+			sqb:            From(TableName("users")).Select(Count(Column("id")).Distinct()).GroupBy(Column("city_id")),
 		},
 		{
 			name:           "offset and limit",
