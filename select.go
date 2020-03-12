@@ -115,18 +115,6 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		return err
 	}
 
-	if !s.GroupByStmt.Empty() {
-		_, err = st.WriteString(` `)
-		if err != nil {
-			return err
-		}
-
-		err = s.GroupByStmt.WriteSQLTo(st)
-		if err != nil {
-			return err
-		}
-	}
-
 	if !s.WhereStmt.Empty() {
 		_, err = st.WriteString(` `)
 		if err != nil {
@@ -134,6 +122,18 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		}
 
 		err = s.WhereStmt.WriteSQLTo(st)
+		if err != nil {
+			return err
+		}
+	}
+
+	if !s.GroupByStmt.Empty() {
+		_, err = st.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = s.GroupByStmt.WriteSQLTo(st)
 		if err != nil {
 			return err
 		}
