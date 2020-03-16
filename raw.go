@@ -18,3 +18,10 @@ func (RawSQL) IsComparable() {}
 func (RawSQL) IsTable()      {}
 func (RawSQL) IsCol()        {}
 func (RawSQL) IsOnExpr()     {}
+
+func Raw(query string, args ...interface{}) RawSQL {
+	return RawSQL{
+		Query: query,
+		Args:  args,
+	}
+}

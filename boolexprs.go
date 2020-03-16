@@ -165,3 +165,34 @@ func (nc NullCheck) WriteSQLTo(w SQLWriter) error {
 	_, err = w.WriteString(str)
 	return err
 }
+
+type BinaryOperator struct {
+	Left, Right Comparable
+	Op          string
+}
+
+func (b BinaryOperator) WriteSQLTo(w SQLWriter) error {
+	err := b.Left.WriteSQLTo(w)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.WriteString(" " + b.Op + " ")
+	if err != nil {
+		return err
+	}
+
+	err = b.Right.WriteSQLTo(w)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func BinaryOp(left Comparable, op string, right Comparable) BinaryOperator {
+	return BinaryOperator{
+		Left:  left,
+		Right: right,
+		Op:    op,
+	}
+}
