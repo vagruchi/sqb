@@ -571,6 +571,8 @@ type Arg struct {
 	V interface{}
 }
 
+func (a Arg) IsCol() {}
+
 func (a Arg) WriteSQLTo(st SQLWriter) error {
 	return st.AddArgs(a.V)
 }

@@ -56,9 +56,9 @@ func (ss SetStmt) WriteSQLTo(w SQLWriter) error {
 }
 
 type UpdateStmt struct {
-	Table TableIdentifier
-	Set   SetStmt
-	Where WhereStmt
+	Table     TableIdentifier
+	Set       SetStmt
+	WhereStmt WhereStmt
 }
 
 func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
@@ -82,11 +82,17 @@ func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
 		return err
 	}
 
-	_, err = w.WriteString(` `)
-	if err != nil {
-		return err
+	if !us.WhereStmt.Empty() {
+		_, err = w.WriteString(` `)
+		if err != nil {
+			return err
+		}
+
+		err = us.WhereStmt.WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
 	}
 
-	err = us.Where.WriteSQLTo(w)
 	return err
 }
