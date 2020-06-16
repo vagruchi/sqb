@@ -8,8 +8,77 @@ type SQB interface {
 	WriteSQLTo(SQLWriter) error
 }
 
+type ColumnListI interface {
+	SQB
+	IsColumnList()
+}
+
+type ColumnList struct {
+	Cols   []Col
+	Prefix string
+}
+
+func (ColumnList) IsColumnList() {}
+
+func NewColumnList(cols ...Col) ColumnList {
+	return ColumnList{
+		Cols: cols,
+	}
+}
+
+func (cl ColumnList) WithPrefix(prefix string) ColumnList {
+	cl.Prefix = prefix
+	return cl
+}
+
+func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
+	var err error
+
+	if len(cl.Cols) == 0 {
+		_, err = w.WriteString("*")
+		return err
+	}
+
+	if cl.Prefix != "" {
+		_, err = w.WriteString(cl.Prefix + ".")
+		if err != nil {
+			return err
+		}
+	}
+
+	err = cl.Cols[0].WriteSQLTo(w)
+	if err != nil {
+		return err
+	}
+
+	if len(cl.Cols) == 1 {
+		return nil
+	}
+
+	for _, c := range cl.Cols[1:] {
+		_, err = w.WriteString(", ")
+		if err != nil {
+			return err
+		}
+
+		if cl.Prefix != "" {
+			_, err = w.WriteString(cl.Prefix + ".")
+			if err != nil {
+				return err
+			}
+		}
+
+		err = c.WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 type SelectStmt struct {
-	Cols        []Col
+	Cols        ColumnListI
 	IsDistinct  bool
 	From        Table
 	WhereStmt   WhereStmt
@@ -37,6 +106,11 @@ func (cs SelectStmt) GroupBy(cc ...Col) SelectStmt {
 	return cp
 }
 
+func (cs SelectStmt) SelectList(cl ColumnListI) SelectStmt {
+	cs.Cols = cl
+	return cs
+}
+
 type Table interface {
 	SQB
 	IsTable()
@@ -59,7 +133,7 @@ type Col interface {
 
 func (cs SelectStmt) Select(cc ...Col) SelectStmt {
 	cp := cs
-	cp.Cols = cc
+	cp.Cols = NewColumnList(cc...)
 	return cp
 }
 
@@ -83,28 +157,15 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 		}
 	}
 
-	if len(s.Cols) == 0 {
-		_, err = st.WriteString("*")
-		if err != nil {
-			return err
-		}
-	} else {
-		for i := 0; i < len(s.Cols)-1; i++ {
-			c := s.Cols[i]
-			err = c.WriteSQLTo(st)
-			if err != nil {
-				return err
-			}
-			_, err = st.WriteString(", ")
-			if err != nil {
-				return err
-			}
-		}
-		err = s.Cols[len(s.Cols)-1].WriteSQLTo(st)
-		if err != nil {
-			return err
-		}
+	if s.Cols == nil {
+		s.Cols = NewColumnList()
 	}
+
+	err = s.Cols.WriteSQLTo(st)
+	if err != nil {
+		return err
+	}
+
 	_, err = st.WriteString(" FROM ")
 	if err != nil {
 		return err
