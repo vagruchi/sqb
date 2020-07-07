@@ -196,3 +196,22 @@ func BinaryOp(left Comparable, op string, right Comparable) BinaryOperator {
 		Op:    op,
 	}
 }
+
+type ExistsStmt struct {
+	Select SelectStmt
+}
+
+func (es ExistsStmt) WriteSQLTo(w SQLWriter) error {
+	_, err := w.WriteString("exists(")
+	if err != nil {
+		return err
+	}
+
+	err = es.Select.WriteSQLTo(w)
+	if err != nil {
+		return err
+	}
+
+	_, err = w.WriteString(")")
+	return err
+}
