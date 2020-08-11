@@ -336,6 +336,8 @@ type OnExpr interface {
 
 func (EqExpr) IsOnExpr()    {}
 func (OnAndExpr) IsOnExpr() {}
+func (OnOrExpr) IsOnExpr()  {}
+func (OnInExpr) IsOnExpr()  {}
 
 type joinStmtWithOn struct {
 	joinStmt
