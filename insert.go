@@ -102,12 +102,12 @@ func (ivs InsertValuesStmt) WriteSQLTo(w SQLWriter) error {
 	}
 
 	for _, values := range ivs[1:] {
-		err = writeLine(w, values)
+		_, err = w.WriteString(", ")
 		if err != nil {
 			return err
 		}
 
-		_, err = w.WriteString(", ")
+		err = writeLine(w, values)
 		if err != nil {
 			return err
 		}
