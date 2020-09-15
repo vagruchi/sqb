@@ -116,15 +116,14 @@ type Table interface {
 	IsTable()
 }
 
-func (TableIdentifierAlias) IsTable() {}
-func (InnerJoinStmt) IsTable()        {}
-func (LeftJoinStmt) IsTable()         {}
-func (FullOuterJoinStmt) IsTable()    {}
-func (RightJoinStmt) IsTable()        {}
-func (CrossJoinStmt) IsTable()        {}
-func (TableIdentifier) IsTable()      {}
-func (SelectStmt) IsTable()           {}
-func (SubqueryAlias) IsTable()        {}
+func (InnerJoinStmt) IsTable()     {}
+func (LeftJoinStmt) IsTable()      {}
+func (FullOuterJoinStmt) IsTable() {}
+func (RightJoinStmt) IsTable()     {}
+func (CrossJoinStmt) IsTable()     {}
+func (Identifier) IsTable()        {}
+func (SelectStmt) IsTable()        {}
+func (SubqueryAlias) IsTable()     {}
 
 type Col interface {
 	SQB
@@ -537,37 +536,13 @@ func CrossJoin(l, r Joinable) CrossJoinStmt {
 	}
 }
 
-type TableIdentifier string
+type TableIdentifier = Identifier
 
 func TableName(n string) TableIdentifier {
 	return TableIdentifier(n)
 }
 
-func (tns TableIdentifier) As(name string) TableIdentifierAlias {
-	return TableIdentifierAlias{
-		TableIdentifier: tns,
-		AS:              name,
-	}
-}
-
-func (tn TableIdentifier) WriteSQLTo(st SQLWriter) error {
-	_, err := st.WriteString(string(tn))
-	return err
-}
-
-type TableIdentifierAlias struct {
-	TableIdentifier
-	AS string
-}
-
-func (tn TableIdentifierAlias) WriteSQLTo(st SQLWriter) error {
-	err := tn.TableIdentifier.WriteSQLTo(st)
-	if err != nil {
-		return err
-	}
-	_, err = st.WriteString(` AS ` + tn.AS)
-	return err
-}
+type TableIdentifierAlias = NamedIdentifier
 
 type WhereStmt struct {
 	Exprs []BoolExpr
@@ -621,14 +596,7 @@ func (ws WhereStmt) WriteSQLTo(st SQLWriter) error {
 	return nil
 }
 
-type Column string
-
-func (Column) IsCol() {}
-
-func (c Column) WriteSQLTo(st SQLWriter) error {
-	_, err := st.WriteString(string(c))
-	return err
-}
+type Column = Identifier
 
 type Arg struct {
 	V interface{}

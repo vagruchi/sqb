@@ -14,7 +14,7 @@ type InsertSource interface {
 func (ivs InsertValuesStmt) IsInsertSource() {}
 func (ss SelectStmt) IsInsertSource()        {}
 
-func Insert(table TableIdentifier, columns []Column, source InsertSource) InsertStmt {
+func Insert(table TableIdentifier, columns []Identifier, source InsertSource) InsertStmt {
 	return InsertStmt{
 		Table:   table,
 		Columns: columns,

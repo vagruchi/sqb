@@ -1,7 +1,7 @@
 package sqb
 
 type SetArg struct {
-	Key   Column
+	Key   Identifier
 	Value Col
 }
 

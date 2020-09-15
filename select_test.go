@@ -113,7 +113,7 @@ func TestWriteSQLToPostgre(t *testing.T) {
 
 		{
 			name:           "where",
-			expectedRawSQL: "SELECT * FROM users WHERE ((city=$1) OR (city=$2))",
+			expectedRawSQL: `SELECT * FROM "users" WHERE (("city"=$1) OR ("city"=$2))`,
 			expectedArgs:   []interface{}{10, 15},
 			sqb:            From(TableName("users")).Where(Or(Eq(Column("city"), Arg{V: 10}), Eq(Column("city"), Arg{V: 15}))),
 		},

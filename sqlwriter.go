@@ -59,6 +59,11 @@ func (p *PostgreSQLWriter) AppendRawArgs(a ...interface{}) error {
 	return nil
 }
 
+func (p *PostgreSQLWriter) WriteIdentifier(ident string) error {
+	_, err := p.WriteString(`"` + ident + `"`)
+	return err
+}
+
 func ToPostgreSql(s SQB) (string, []interface{}, error) {
 	st := &PostgreSQLWriter{}
 	err := s.WriteSQLTo(st)
