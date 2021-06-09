@@ -55,11 +55,13 @@ func (ss SetStmt) WriteSQLTo(w SQLWriter) error {
 	return nil
 }
 
+type ReturnCols ColumnListI
+
 type UpdateStmt struct {
 	Table      TableIdentifier
 	Set        SetStmt
 	WhereStmt  WhereStmt
-	ReturnCols ColumnListI
+	ReturnCols ReturnCols
 }
 
 func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {

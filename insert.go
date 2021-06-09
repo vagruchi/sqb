@@ -1,9 +1,10 @@
 package sqb
 
 type InsertStmt struct {
-	Table   TableIdentifier
-	Columns []Column
-	Source  InsertSource
+	Table      TableIdentifier
+	Columns    []Column
+	Source     InsertSource
+	ReturnCols ReturnCols
 }
 
 type InsertSource interface {
@@ -64,7 +65,24 @@ func (is InsertStmt) WriteSQLTo(w SQLWriter) error {
 		}
 	}
 
+	// must be last statement in query
+	if is.ReturnCols != nil {
+		_, err = w.WriteString(" RETURNING ")
+		if err != nil {
+			return err
+		}
+		err = is.ReturnCols.WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
+	}
+
 	return is.Source.WriteSQLTo(w)
+}
+
+func (is InsertStmt) Returning(cc ...Col) InsertStmt {
+	is.ReturnCols = NewColumnList(cc...)
+	return is
 }
 
 type InsertValue interface {
