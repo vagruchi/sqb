@@ -80,12 +80,19 @@ func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
 type SelectStmt struct {
 	Cols        ColumnListI
 	IsDistinct  bool
+	IsForUpdate bool
 	From        Table
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
 	GroupByStmt GroupByStmt
 	LimitStmt   LimitStmt
 	OffsetStmt  OffsetStmt
+}
+
+func (cs SelectStmt) ForUpdate() SelectStmt {
+	cp := cs
+	cp.IsForUpdate = true
+	return cp
 }
 
 func (cs SelectStmt) Distinct() SelectStmt {
@@ -235,7 +242,13 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 			return err
 		}
 	}
-
+	// must be last statement in query
+	if s.IsForUpdate {
+		_, err := st.WriteString(` FOR UPDATE`)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
