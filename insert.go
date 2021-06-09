@@ -65,24 +65,16 @@ func (is InsertStmt) WriteSQLTo(w SQLWriter) error {
 		}
 	}
 
-	// must be last statement in query
-	if is.ReturnCols != nil {
-		_, err = w.WriteString(" RETURNING ")
-		if err != nil {
-			return err
-		}
-		err = is.ReturnCols.WriteSQLTo(w)
-		if err != nil {
-			return err
-		}
+	err = is.Source.WriteSQLTo(w)
+	if err != nil {
+		return err
 	}
-
-	return is.Source.WriteSQLTo(w)
-}
-
-func (is InsertStmt) Returning(cc ...Col) InsertStmt {
-	is.ReturnCols = NewColumnList(cc...)
-	return is
+	// must be last statement
+	err = is.ReturnCols.WriteSQLTo(w)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 type InsertValue interface {
@@ -132,6 +124,11 @@ func (ivs InsertValuesStmt) WriteSQLTo(w SQLWriter) error {
 	}
 
 	return nil
+}
+
+func (is InsertStmt) Returning(cc ...Col) InsertStmt {
+	is.ReturnCols = ReturnCols(NewColumnList(cc...))
+	return is
 }
 
 func writeLine(w SQLWriter, values []InsertValue) error {

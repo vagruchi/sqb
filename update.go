@@ -55,8 +55,6 @@ func (ss SetStmt) WriteSQLTo(w SQLWriter) error {
 	return nil
 }
 
-type ReturnCols ColumnListI
-
 type UpdateStmt struct {
 	Table      TableIdentifier
 	Set        SetStmt
@@ -96,22 +94,48 @@ func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
 			return err
 		}
 	}
-	// must be last statement in query
-	if us.ReturnCols != nil {
-		_, err = w.WriteString(" RETURNING ")
-		if err != nil {
-			return err
-		}
-		err = us.ReturnCols.WriteSQLTo(w)
-		if err != nil {
-			return err
-		}
+	// must be last statement
+	err = us.ReturnCols.WriteSQLTo(w)
+	if err != nil {
+		return err
 	}
 
-	return err
+	return nil
 }
 
+type ReturnCols ColumnList
+
 func (us UpdateStmt) Returning(cc ...Col) UpdateStmt {
-	us.ReturnCols = NewColumnList(cc...)
+	us.ReturnCols = ReturnCols(NewColumnList(cc...))
 	return us
+}
+
+func (rc ReturnCols) WriteSQLTo(w SQLWriter) error {
+	if len(rc.Cols) > 0 {
+		_, err := w.WriteString(" RETURNING ")
+		if err != nil {
+			return err
+		}
+
+		err = rc.Cols[0].WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
+
+		if len(rc.Cols) == 1 {
+			return nil
+		}
+
+		for _, c := range rc.Cols[1:] {
+			_, err = w.WriteString(", ")
+			if err != nil {
+				return err
+			}
+			err = c.WriteSQLTo(w)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
