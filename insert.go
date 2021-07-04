@@ -4,7 +4,7 @@ type InsertStmt struct {
 	Table      TableIdentifier
 	Columns    []Column
 	Source     InsertSource
-	ReturnCols ReturnCols
+	ReturnCols ColumnListI
 }
 
 type InsertSource interface {
@@ -70,9 +70,16 @@ func (is InsertStmt) WriteSQLTo(w SQLWriter) error {
 		return err
 	}
 	// must be last statement
-	err = is.ReturnCols.WriteSQLTo(w)
-	if err != nil {
-		return err
+	if is.ReturnCols != nil {
+		_, err := w.WriteString(" RETURNING ")
+		if err != nil {
+			return err
+		}
+
+		err = is.ReturnCols.WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -127,7 +134,7 @@ func (ivs InsertValuesStmt) WriteSQLTo(w SQLWriter) error {
 }
 
 func (is InsertStmt) Returning(cc ...Col) InsertStmt {
-	is.ReturnCols = ReturnCols(NewColumnList(cc...))
+	is.ReturnCols = NewColumnList(cc...)
 	return is
 }
 

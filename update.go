@@ -59,7 +59,7 @@ type UpdateStmt struct {
 	Table      TableIdentifier
 	Set        SetStmt
 	WhereStmt  WhereStmt
-	ReturnCols ReturnCols
+	ReturnCols ColumnListI
 }
 
 func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
@@ -95,47 +95,22 @@ func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
 		}
 	}
 	// must be last statement
-	err = us.ReturnCols.WriteSQLTo(w)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-type ReturnCols ColumnList
-
-func (us UpdateStmt) Returning(cc ...Col) UpdateStmt {
-	us.ReturnCols = ReturnCols(NewColumnList(cc...))
-	return us
-}
-
-func (rc ReturnCols) WriteSQLTo(w SQLWriter) error {
-	if len(rc.Cols) > 0 {
+	if us.ReturnCols != nil {
 		_, err := w.WriteString(" RETURNING ")
 		if err != nil {
 			return err
 		}
 
-		err = rc.Cols[0].WriteSQLTo(w)
+		err = us.ReturnCols.WriteSQLTo(w)
 		if err != nil {
 			return err
 		}
-
-		if len(rc.Cols) == 1 {
-			return nil
-		}
-
-		for _, c := range rc.Cols[1:] {
-			_, err = w.WriteString(", ")
-			if err != nil {
-				return err
-			}
-			err = c.WriteSQLTo(w)
-			if err != nil {
-				return err
-			}
-		}
 	}
+
 	return nil
+}
+
+func (us UpdateStmt) Returning(cc ...Col) UpdateStmt {
+	us.ReturnCols = NewColumnList(cc...)
+	return us
 }
