@@ -56,9 +56,10 @@ func (ss SetStmt) WriteSQLTo(w SQLWriter) error {
 }
 
 type UpdateStmt struct {
-	Table     TableIdentifier
-	Set       SetStmt
-	WhereStmt WhereStmt
+	Table         TableIdentifier
+	Set           SetStmt
+	WhereStmt     WhereStmt
+	ReturningStmt ReturningStmt
 }
 
 func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
@@ -93,6 +94,17 @@ func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
 			return err
 		}
 	}
+	// must be last statement
+	if us.ReturningStmt.Cols != nil {
+		err = us.ReturningStmt.WriteSQLTo(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
-	return err
+func (us UpdateStmt) Returning(cc ...Col) UpdateStmt {
+	us.ReturningStmt.Cols = NewColumnList(cc...)
+	return us
 }

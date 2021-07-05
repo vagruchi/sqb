@@ -31,9 +31,21 @@ func (cl ColumnList) WithPrefix(prefix string) ColumnList {
 	return cl
 }
 
+type ReturningStmt struct {
+	Cols ColumnListI
+}
+
+func (cl ReturningStmt) WriteSQLTo(w SQLWriter) error {
+	_, err := w.WriteString(" RETURNING ")
+	if err != nil {
+		return err
+	}
+
+	return cl.Cols.WriteSQLTo(w)
+}
+
 func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
 	var err error
-
 	if len(cl.Cols) == 0 {
 		_, err = w.WriteString("*")
 		return err
@@ -80,12 +92,19 @@ func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
 type SelectStmt struct {
 	Cols        ColumnListI
 	IsDistinct  bool
+	IsForUpdate bool
 	From        Table
 	WhereStmt   WhereStmt
 	OrderByStmt OrderByStmt
 	GroupByStmt GroupByStmt
 	LimitStmt   LimitStmt
 	OffsetStmt  OffsetStmt
+}
+
+func (cs SelectStmt) ForUpdate() SelectStmt {
+	cp := cs
+	cp.IsForUpdate = true
+	return cp
 }
 
 func (cs SelectStmt) Distinct() SelectStmt {
@@ -235,7 +254,13 @@ func (s SelectStmt) WriteSQLTo(st SQLWriter) error {
 			return err
 		}
 	}
-
+	// must be last statement in query
+	if s.IsForUpdate {
+		_, err := st.WriteString(` FOR UPDATE`)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
