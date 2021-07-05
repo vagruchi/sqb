@@ -71,11 +71,6 @@ func (is InsertStmt) WriteSQLTo(w SQLWriter) error {
 	}
 	// must be last statement
 	if is.ReturnCols != nil {
-		_, err := w.WriteString(" RETURNING ")
-		if err != nil {
-			return err
-		}
-
 		err = is.ReturnCols.WriteSQLTo(w)
 		if err != nil {
 			return err
@@ -134,7 +129,7 @@ func (ivs InsertValuesStmt) WriteSQLTo(w SQLWriter) error {
 }
 
 func (is InsertStmt) Returning(cc ...Col) InsertStmt {
-	is.ReturnCols = NewColumnList(cc...)
+	is.ReturnCols = ReturningColumns(cc...)
 	return is
 }
 

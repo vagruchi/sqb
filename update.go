@@ -96,21 +96,15 @@ func (us UpdateStmt) WriteSQLTo(w SQLWriter) error {
 	}
 	// must be last statement
 	if us.ReturnCols != nil {
-		_, err := w.WriteString(" RETURNING ")
-		if err != nil {
-			return err
-		}
-
 		err = us.ReturnCols.WriteSQLTo(w)
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
 func (us UpdateStmt) Returning(cc ...Col) UpdateStmt {
-	us.ReturnCols = NewColumnList(cc...)
+	us.ReturnCols = ReturningColumns(cc...)
 	return us
 }
