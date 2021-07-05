@@ -14,9 +14,8 @@ type ColumnListI interface {
 }
 
 type ColumnList struct {
-	Cols        []Col
-	Prefix      string
-	IsReturning bool
+	Cols   []Col
+	Prefix string
 }
 
 func (ColumnList) IsColumnList() {}
@@ -27,27 +26,26 @@ func NewColumnList(cols ...Col) ColumnList {
 	}
 }
 
-func ReturningColumns(cols ...Col) ColumnList {
-	return ColumnList{
-		Cols:        cols,
-		IsReturning: true,
-	}
-}
-
 func (cl ColumnList) WithPrefix(prefix string) ColumnList {
 	cl.Prefix = prefix
 	return cl
 }
 
+type ReturningStmt struct {
+	Cols ColumnListI
+}
+
+func (cl ReturningStmt) WriteSQLTo(w SQLWriter) error {
+	_, err := w.WriteString(" RETURNING ")
+	if err != nil {
+		return err
+	}
+	cl.Cols.WriteSQLTo(w)
+	return err
+}
+
 func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
 	var err error
-	if cl.IsReturning {
-		_, err = w.WriteString(" RETURNING ")
-		if err != nil {
-			return err
-		}
-	}
-
 	if len(cl.Cols) == 0 {
 		_, err = w.WriteString("*")
 		return err

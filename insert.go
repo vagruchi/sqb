@@ -1,10 +1,10 @@
 package sqb
 
 type InsertStmt struct {
-	Table      TableIdentifier
-	Columns    []Column
-	Source     InsertSource
-	ReturnCols ColumnListI
+	Table         TableIdentifier
+	Columns       []Column
+	Source        InsertSource
+	ReturningStmt ReturningStmt
 }
 
 type InsertSource interface {
@@ -70,8 +70,8 @@ func (is InsertStmt) WriteSQLTo(w SQLWriter) error {
 		return err
 	}
 	// must be last statement
-	if is.ReturnCols != nil {
-		err = is.ReturnCols.WriteSQLTo(w)
+	if is.ReturningStmt.Cols != nil {
+		err = is.ReturningStmt.WriteSQLTo(w)
 		if err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (ivs InsertValuesStmt) WriteSQLTo(w SQLWriter) error {
 }
 
 func (is InsertStmt) Returning(cc ...Col) InsertStmt {
-	is.ReturnCols = ReturningColumns(cc...)
+	is.ReturningStmt.Cols = NewColumnList(cc...)
 	return is
 }
 
