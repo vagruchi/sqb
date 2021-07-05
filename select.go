@@ -40,8 +40,8 @@ func (cl ReturningStmt) WriteSQLTo(w SQLWriter) error {
 	if err != nil {
 		return err
 	}
-	cl.Cols.WriteSQLTo(w)
-	return err
+
+	return cl.Cols.WriteSQLTo(w)
 }
 
 func (cl ColumnList) WriteSQLTo(w SQLWriter) error {
