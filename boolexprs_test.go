@@ -15,22 +15,22 @@ func Test_NotExpr(t *testing.T) {
 		expectedArgs   []interface{}
 	}{
 		{
-			name:           "subquery",
+			name:           "not with eq",
 			expectedRawSQL: "SELECT * FROM users AS users WHERE (NOT (age=10))",
 			sqb:            From(TableName("users").As("users")).Where(Not(Eq(Column("age"), Column("10")))),
 		},
 		{
-			name:           "subquery",
+			name:           "not with and",
 			expectedRawSQL: "SELECT * FROM users AS users WHERE (NOT ((age=10) AND (age=99)))",
 			sqb:            From(TableName("users").As("users")).Where(Not(And(Eq(Column("age"), Column("10")), Eq(Column("age"), Column("99"))))),
 		},
 		{
-			name:           "subquery",
+			name:           "not with or",
 			expectedRawSQL: "SELECT * FROM users AS users WHERE (NOT ((age=10) OR (age=99)))",
 			sqb:            From(TableName("users").As("users")).Where(Not(Or(Eq(Column("age"), Column("10")), Eq(Column("age"), Column("99"))))),
 		},
 		{
-			name:           "subquery",
+			name:           "not with exists",
 			expectedRawSQL: "SELECT * FROM users AS users WHERE (NOT (exists(SELECT * FROM statuses WHERE (statuses.active=?) AND (users.id=statuses.user_id))))",
 			expectedArgs:   []interface{}{true},
 			sqb: From(TableName("users").As("users")).
